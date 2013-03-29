@@ -59,7 +59,8 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
 
     def git_branch_callback(self, output):
         if output:
-            self.branch = output
+            branch = re.findall(r'\* (\S+)$', output)[0]
+            self.branch = branch
             self.vcs = self.git_label
             self.update_status()
             self.set_modified_count()
