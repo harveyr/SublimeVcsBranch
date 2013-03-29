@@ -54,7 +54,6 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
         if output:
             self.branch = output
             self.vcs = self.hg_label
-            self.update_status()
             self.set_modified_count()
 
     def git_branch_callback(self, output):
@@ -62,11 +61,11 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
             branch = re.findall(r'\* (\S+)$', output)[0]
             self.branch = branch
             self.vcs = self.git_label
-            self.update_status()
             self.set_modified_count()
 
     def set_modified_count(self):
-        # return
+        self.modified_count = 'fetching...'
+        self.update_status()
         if self.in_git():
             CommandRunner('git status --porcelain',
                 self.modified_count_callback)
@@ -83,9 +82,14 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
     def update_status(self):
         if not self.vcs:
             self.reset()
+        modified_count = self.modified_count
+        try:
+            modified_count = int(modified_count)
+        except ValueError:
+            modified_count = '...'
 
         s = "[{}: {} | {} modified]".format(self.vcs, self.branch,
-            self.modified_count)
+            modified_count)
         self.view.set_status('vcs_branch', s)
         return True
 
