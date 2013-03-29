@@ -1,50 +1,118 @@
 # http://www.sublimetext.com/docs/commands
 # http://www.sublimetext.com/docs/2/api_reference.html
 # http://www.sublimetext.com/docs/plugin-basics
+# http://www.sublimetext.com/docs/3/porting_guide.html
 
 import os
 import subprocess
+import threading
 import re
 import sublime, sublime_plugin
 
+class CommandRunner(threading.Thread):
+    def __init__(self, command_str, callback):
+        threading.Thread.__init__(self)
+        self.callback = callback
+        self.command = command_str
+        self.start()
+
+    def run(self):
+        try:
+            output = subprocess.check_output(self.command.split(' '))
+            self.callback(output.decode("utf-8").strip())
+        except subprocess.CalledProcessError:
+            self.callback(None)
+
 class BranchStatusListener(sublime_plugin.EventListener):
-    def on_activated(self, view):
-        # print('on_activated')
+    def on_activated_async(self, view):
         view.run_command('branch_status')
-    def on_post_save(self, view):
+    def on_post_save_async(self, view):
         view.run_command('branch_status')
-        # print('on_post_save')
 
 class BranchStatusCommand(sublime_plugin.TextCommand):
+    vcs = None
+    branch = None
+    modified_count = 0
+    git_label = 'Git'
+    hg_label = 'Hg'
+
     def run(self, view):
-        hg_branch = None
-        git_branch = None
+        self.reset()
+        self.set_branch()
+
+    def set_branch(self):
+        cwd = self.get_cwd()
+        if not cwd:
+            return False
 
         os.chdir(self.get_cwd())
-        try:
-            hg_branch = subprocess.check_output(['hg', 'branch'])
-            hg_branch = hg_branch.decode("utf-8").strip()
-        except subprocess.CalledProcessError:
-            pass
 
-        try:
-            git_branch = subprocess.check_output(['git', 'branch'])
-            git_branch = git_branch.decode("utf-8").strip()
-        except subprocess.CalledProcessError:
-            pass
+        CommandRunner('hg branch', self.hg_branch_callback)
+        CommandRunner('git branch', self.git_branch_callback)
 
-        branch = hg_branch if hg_branch else git_branch
+    def hg_branch_callback(self, output):
+        if output:
+            self.branch = output
+            self.vcs = self.hg_label
+            self.update_status()
+            self.set_modified_count()
 
-        if branch:
-            self.view.set_status('vcs_branch', self.format(branch))
+    def git_branch_callback(self, output):
+        if output:
+            self.branch = output
+            self.vcs = self.git_label
+            self.update_status()
+            self.set_modified_count()
+
+    def set_modified_count(self):
+        # return
+        if self.in_git():
+            CommandRunner('git status --porcelain',
+                self.modified_count_callback)
+        elif self.in_hg():
+            CommandRunner('hg status', self.modified_count_callback)
+
+    def modified_count_callback(self, data):
+        if not data:
+            self.modified_count = 0
         else:
-            self.view.set_status('vcs_branch', '')
+            self.modified_count = len(data.split('\n'))
+        self.update_status()
 
-    def format(self, branch_str):
-        return "Branch {}".format(branch_str)
+    def update_status(self):
+        if not self.vcs:
+            self.reset()
+
+        s = "[{}: {} | {} modified]".format(self.vcs, self.branch,
+            self.modified_count)
+        self.view.set_status('vcs_branch', s)
+        return True
+
+    def run_command(self, command):
+        try:
+            output = subprocess.check_output(command.split(' '))
+            return output.decode("utf-8").strip()
+        except subprocess.CalledProcessError:
+            return None
+
+    def reset(self):
+        self.vcs = None
+        self.branch = None
+        self.modified_count = 0
+        self.view.set_status('vcs_branch', '')
+
+    def in_git(self):
+        return self.vcs == self.git_label
+
+    def in_hg(self):
+        return self.vcs == self.hg_label
 
     def get_cwd(self):
-        return '/'.join(self.get_filename().split('/')[:-1])
+        file_name = self.get_filename()
+        if file_name:
+            return '/'.join(self.get_filename().split('/')[:-1])
+        else:
+            return None
 
     def get_filename(self):
         return self.view.file_name()
