@@ -1,6 +1,18 @@
-Sublime VCS Branch
+Sublime Text VCS Branch Plugin
 ==============
 
-Display your git or mercurial branch in the Sublime Text status bar, as well as the modified-file count. Written for ST3.
+Sublime Text plugin that displays a few repo stats in the status bar. Written for ST3.
 
-I'm playing around with Github pages. More info will soon be available at [http://harveyr.github.com/sublime-vcs-branch/](http://harveyr.github.com/sublime-vcs-branch/)
+Only git and mercurial are supported at this time (since they're all I use).
+
+Currently, the plugin displays:
+* branch name
+* modified file count
+* incoming changeset count
+* outgoing changeset count
+
+![Example](http://i1217.photobucket.com/albums/dd393/gfizeek/vcs-branch.jpg "Image Example")
+
+There is no config (yet). The plugin will figure out which VCS you're in.
+
+It's still in its quick-and-dirty stage. Suggestions are very welcome!
