@@ -70,7 +70,7 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
         if self.been_awhile() and self.in_git():
             # Run this stuff only every so often
             CommandRunner('git fetch')
-        
+
         self.fetch_incoming()
         self.fetch_outgoing()
 
@@ -122,7 +122,8 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
             if not output:
                 self.incoming_count = 0
             else:
-                matches = re.findall(self.git_log_re, output)
+                matches = re.findall(self.git_log_re, output,
+                    flags=re.MULTILINE)
                 self.incoming_count = len(matches)
             self.update_status()
 
@@ -144,7 +145,8 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
             if not output:
                 self.outgoing_count = 0
             else:
-                matches = re.findall(self.git_log_re, output)
+                matches = re.findall(self.git_log_re, output,
+                    flags=re.MULTILINE)
                 self.outgoing_count = len(matches)
             self.update_status()
 
@@ -203,7 +205,7 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
             # If we've never set the timestamp, it's been awhile
             self.last_full_run = datetime.datetime.now()
             return True
-        
+
         delta = datetime.datetime.now() - self.last_full_run
         if delta.seconds > 30:
             # Longer than ^^^ seconds == been awhile
