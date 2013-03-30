@@ -48,8 +48,6 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
     git_log_re = r'^commit \S+'
 
     def run(self, view):
-        print("{} threads".format(len(threading.enumerate())))
-        
         if not self.last_full_run:
             self.last_full_run = datetime.datetime.now()
 
