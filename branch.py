@@ -85,7 +85,7 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
         def git_callback(output):
             if output:
                 self.vcs = self.git_label
-                matches = re.findall(r'\* (\S+)$', output)
+                matches = re.findall(r'\* (\S+)', output)
                 self.set_branch(matches[0])
 
         CommandRunner('hg branch', hg_callback)
