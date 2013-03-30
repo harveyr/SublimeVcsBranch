@@ -44,7 +44,12 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
     git_label = 'Git'
     hg_label = 'Hg'
 
+    hg_log_re = r'branch:\s+(\S+)'
+    git_log_re = r'^commit \S+'
+
     def run(self, view):
+        print("{} threads".format(len(threading.enumerate())))
+        
         if not self.last_full_run:
             self.last_full_run = datetime.datetime.now()
 
@@ -60,8 +65,9 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
         if self.been_awhile():
             if self.in_git():
                 CommandRunner('git fetch')
-            pass
+        
         self.fetch_incoming()
+        self.fetch_outgoing()
 
 
     def fetch_branch(self):
@@ -105,17 +111,12 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
         def hg_callback(output):
             if not output:
                 return
-            self.incoming_count = 0
-            matches = re.findall(r'branch:\s+(\S+)', output)
-            for match in matches:
-                if match == self.branch:
-                    self.incoming_count += 1
-            self.update_status()
+            self.count_hg_log_matches(re.findall(self.hg_log_re, output))
 
         def git_callback(output):
             if not output:
                 return
-            matches = re.findall(r'^commit \S+', output)
+            matches = re.findall(self.git_log_re, output)
             self.incoming_count = len(matches)
             self.update_status()
 
@@ -123,6 +124,21 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
             CommandRunner('hg incoming', hg_callback)
         elif self.in_git():
             command = 'git whatchanged ..origin/{}'.format(self.branch)
+            CommandRunner(command, git_callback)
+
+    def fetch_outgoing(self):
+        def hg_callback(output):
+            if not output:
+                return
+            self.count_hg_log_matches(re.findall(self.hg_log_re, output))
+
+        def git_callback(output):
+            matches = re.findall(self.git_log_re, output)
+            self.outgoing_count = len(matches)
+            self.update_status()
+
+        if self.in_git():
+            command = 'git whatchanged origin/{}..'.format(self.branch)
             CommandRunner(command, git_callback)
 
     def update_status(self):
@@ -134,15 +150,23 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
             modified_count = int(modified_count)
         except ValueError:
             modified_count = '...'
-        modified_count = '{} modified'.format(modified_count)
+        modified_count = '{}'.format(modified_count)
 
-        s = "[{}: {} | {} | {}↓]".format(
+        s = "[{}: {} {}Δ {}↓ {}↑]".format(
             self.vcs,
             self.branch,
             modified_count,
-            self.incoming_count)
+            self.incoming_count,
+            self.outgoing_count)
         self.view.set_status('vcs_branch', s)
         return True
+
+    def count_hg_log_matches(self, matches):
+        self.incoming_count = 0
+        for match in matches:
+            if match == self.branch:
+                self.incoming_count += 1
+        self.update_status()
 
     def run_command(self, command):
         try:
