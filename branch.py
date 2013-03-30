@@ -59,6 +59,10 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
 
     def set_branch(self, branch_name):
         """Sets the branch name and fires off the second group of fetchers."""
+        if not self.vcs:
+            # Stop the rest of the plugin execution
+            return
+
         self.branch = branch_name
 
         self.fetch_modified_count()
@@ -73,7 +77,6 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
     def fetch_branch(self):
         """Fetches the branch name, and, in the process, figures out which
         VCS we're in."""
-        print('fetch_branch')
         def hg_callback(output):
             if output:
                 self.vcs = self.hg_label
@@ -110,14 +113,17 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
     def fetch_incoming(self):
         def hg_callback(output):
             if not output:
-                return
-            self.count_hg_log_matches(re.findall(self.hg_log_re, output))
+                self.incoming_count = 0
+            else:
+                self.count_hg_log_matches(re.findall(self.hg_log_re, output))
+            self.update_status()
 
         def git_callback(output):
             if not output:
-                return
-            matches = re.findall(self.git_log_re, output)
-            self.incoming_count = len(matches)
+                self.incoming_count = 0
+            else:
+                matches = re.findall(self.git_log_re, output)
+                self.incoming_count = len(matches)
             self.update_status()
 
         if self.in_hg():
@@ -130,12 +136,16 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
         def hg_callback(output):
             if not output:
                 self.outgoing_count = 0
-                return
-            self.count_hg_log_matches(re.findall(self.hg_log_re, output))
+            else:
+                self.count_hg_log_matches(re.findall(self.hg_log_re, output))
+            self.update_status()
 
         def git_callback(output):
-            matches = re.findall(self.git_log_re, output)
-            self.outgoing_count = len(matches)
+            if not output:
+                self.outgoing_count = 0
+            else:
+                matches = re.findall(self.git_log_re, output)
+                self.outgoing_count = len(matches)
             self.update_status()
 
         if self.in_git():
