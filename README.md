@@ -1,7 +1,7 @@
 Sublime VCS Branch
 ==============
 
-Display a few repo stats in your Sublime Text status bar. Written for ST3.
+Sublime Text plugin that displays a few repo stats in the status bar. Written for ST3.
 
 Only git and mercurial are supported at this time (since they're all I use).
 
