@@ -1,4 +1,4 @@
-Sublime VCS Branch
+Sublime Text VCS Branch Plugin
 ==============
 
 Sublime Text plugin that displays a few repo stats in the status bar. Written for ST3.
