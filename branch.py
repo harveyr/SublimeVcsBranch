@@ -115,7 +115,8 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
             if not output:
                 self.incoming_count = 0
             else:
-                self.count_hg_log_matches(re.findall(self.hg_log_re, output))
+                self.incoming_count = self.count_hg_log_matches(
+                    re.findall(self.hg_log_re, output))
             self.update_status()
 
         def git_callback(output):
@@ -138,7 +139,8 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
             if not output:
                 self.outgoing_count = 0
             else:
-                self.count_hg_log_matches(re.findall(self.hg_log_re, output))
+                self.outgoing_count = self.count_hg_log_matches(
+                    re.findall(self.hg_log_re, output))
             self.update_status()
 
         def git_callback(output):
@@ -163,7 +165,7 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
             self.view.set_status('vcs_branch', '')
             return
 
-        s = "[{}: {} {}Δ {}↓ {}↑]".format(
+        s = "({}) {} {}Δ {}↓ {}↑".format(
             self.vcs,
             self.branch,
             self.modified_count,
@@ -173,11 +175,11 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
         return True
 
     def count_hg_log_matches(self, matches):
-        self.incoming_count = 0
+        count = 0
         for match in matches:
             if match == self.branch:
-                self.incoming_count += 1
-        self.update_status()
+                count += 1
+        return count
 
     def run_command(self, command):
         try:
