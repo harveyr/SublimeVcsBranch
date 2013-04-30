@@ -1,10 +1,6 @@
 Sublime Text VCS Branch Plugin
 ==============
 
-- - -
-**NOTE: I believe this plugin is a cpu hog at the moment. I'll be debugging performance issues shortly.**
-- - -
-
 Sublime Text plugin that displays a few repo stats in the status bar.
 
 **Requires Sublime Text 3**, as it uses some of the new asynchronous functionality.
