@@ -4,35 +4,26 @@
 # http://www.sublimetext.com/docs/3/porting_guide.html
 
 import os
+import time
 import subprocess
 import threading
 import re
 import datetime
 import sublime, sublime_plugin
+from VCSBranch.h_helpers import CommandRunner
 
-class CommandRunner(threading.Thread):
-    def __init__(self, command_str, callback=None):
-        threading.Thread.__init__(self)
-        self.callback = callback
-        self.command = command_str
-        self.start()
-
-    def run(self):
-        result = None
-        try:
-            output = subprocess.check_output(self.command.split(' '))
-            result = output.decode("utf-8").strip()
-        except Exception as e:
-            # print("{}: {}".format(self.command, e))
-            result = None
-        if self.callback:
-            self.callback(result)
 
 class BranchStatusListener(sublime_plugin.EventListener):
     def on_activated_async(self, view):
         view.run_command('branch_status')
     def on_post_save_async(self, view):
         view.run_command('branch_status')
+
+
+class BranchStatusResetCommand(sublime_plugin.TextCommand):
+    def run(self, view):
+        self.view.set_status('vcs_branch', '(VCS Branch: waiting for save)')
+
 
 class BranchStatusCommand(sublime_plugin.TextCommand):
     last_full_run = None
@@ -47,19 +38,31 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
     hg_log_re = r'branch:\s+(\S+)'
     git_log_re = r'^commit \S+'
 
-    def run(self, view):
-        self.reset()
+    running = False
+    queued = False
 
+    def run(self, view):
+        thread_count = threading.active_count()
+        if self.running is True or thread_count > 2:
+            return
+
+        self.running = True
+        self._run()
+
+    def _run(self):
+        # print('Running')
+        self.reset()
         cwd = self.getcwd()
         if not cwd:
+            # print('no cwd')
             return
         os.chdir(self.getcwd())
-
         self.fetch_branch()
 
     def set_branch(self, branch_name):
         """Sets the branch name and fires off the second group of fetchers."""
         if not self.vcs:
+            print('no vcs!!!')
             # Stop the rest of the plugin execution
             return
 
@@ -83,8 +86,14 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
                 self.set_branch(output)
 
         def git_callback(output):
+            # print('fetch_branch git_callback')
             if output:
+                self.vcs = self.git_label
+                # print('setting git branch to {}'.format(output))
                 self.set_branch(output)
+            else:
+                # print('fetch_branch git_callback: no ouput')
+                pass
 
         CommandRunner('hg branch', hg_callback)
         CommandRunner('git rev-parse --abbrev-ref HEAD', git_callback)
@@ -127,12 +136,13 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
             self.update_status()
 
         if self.in_hg():
-            CommandRunner('hg incoming', hg_callback)
+            CommandRunner('hg incoming -b {}'.format(self.branch), hg_callback)
         elif self.in_git():
             command = 'git whatchanged ..origin/{}'.format(self.branch)
             CommandRunner(command, git_callback)
 
     def fetch_outgoing(self):
+        # print('fetch_outgoing')
         def hg_callback(output):
             if not output:
                 self.outgoing_count = 0
@@ -140,8 +150,10 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
                 self.outgoing_count = self.count_hg_log_matches(
                     re.findall(self.hg_log_re, output))
             self.update_status()
+            self.all_done()
 
         def git_callback(output):
+            # print('git_callback')
             if not output:
                 self.outgoing_count = 0
             else:
@@ -149,6 +161,7 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
                     flags=re.MULTILINE)
                 self.outgoing_count = len(matches)
             self.update_status()
+            self.all_done()
 
         if self.in_git():
             command = 'git whatchanged origin/{}..'.format(self.branch)
@@ -156,6 +169,9 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
 
         if self.in_hg():
             CommandRunner('hg outgoing', hg_callback)
+
+    def all_done(self):
+        self.running = False
 
     def update_status(self):
         if not self.vcs:
@@ -224,6 +240,3 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
 
     def get_filename(self):
         return self.view.file_name()
-
-    def test(self, data):
-        print(str(data))
