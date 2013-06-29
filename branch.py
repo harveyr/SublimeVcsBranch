@@ -4,18 +4,18 @@
 # http://www.sublimetext.com/docs/3/porting_guide.html
 
 import os
-import time
 import subprocess
 import threading
 import re
 import datetime
-import sublime, sublime_plugin
+import sublime_plugin
 from VCSBranch.h_helpers import CommandRunner
 
 
 class BranchStatusListener(sublime_plugin.EventListener):
     def on_activated_async(self, view):
         view.run_command('branch_status')
+
     def on_post_save_async(self, view):
         view.run_command('branch_status')
 
@@ -130,8 +130,9 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
             if not output:
                 self.incoming_count = 0
             else:
-                matches = re.findall(self.git_log_re, output,
-                    flags=re.MULTILINE)
+                matches = re.findall(
+                    self.git_log_re, output, flags=re.MULTILINE)
+
                 self.incoming_count = len(matches)
             self.update_status()
 
@@ -157,8 +158,9 @@ class BranchStatusCommand(sublime_plugin.TextCommand):
             if not output:
                 self.outgoing_count = 0
             else:
-                matches = re.findall(self.git_log_re, output,
-                    flags=re.MULTILINE)
+                matches = re.findall(
+                    self.git_log_re, output, flags=re.MULTILINE)
+
                 self.outgoing_count = len(matches)
             self.update_status()
             self.all_done()
