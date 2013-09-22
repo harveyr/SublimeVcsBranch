@@ -7,7 +7,7 @@ Sublime Text VCS Branch Plugin
 
 Sublime Text plugin that displays a few repo stats in the status bar.
 
-**Requires Sublime Text 3**, as it uses some of the new asynchronous functionality.
+**Requires Sublime Text 3**, as it uses the new asynchronous API.
 
 Only Git and Mercurial are supported at this time (since they're all I use).
 
